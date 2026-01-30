@@ -1,11 +1,14 @@
-1. 数据集说明
+[TOC]
+
+# 1. 数据集说明
+
 这是一份手游《野蛮时代》的用户数据，共有训练集和测试集两个数据文件。二者之间数据无交集，合计大小 861 M，总记录数 3,116,941，包含字段 109 个。
 
-2. 数据处理
+# 2. 数据处理
+
 数据处理：将两个数据文件合并，只取分析要用的字段。然后把数据写到 mysql。
-
-只取用于分析的字段，因为字段数太多，去掉没用的字段可以极大的节省内存和提高效率
-
+>只取用于分析的字段，因为字段数太多，去掉没用的字段可以极大的节省内存和提高效率
+```python
 ## 合并数据文件 
 dir = r"C:\Users\Administrator\Desktop\AgeOfBarbarians"
 data_list = []
@@ -30,45 +33,53 @@ data = pd.concat(data_list)
 # 保存清洗后的数据 mysql
 engine = create_engine('mysql://root:root@172.16.122.25:3306/test?charset=utf8')
 data.to_sql('age_of_barbarians', con=engine, index=False, if_exists='append')
-image-20201230152058798
+
+```
+
+![image-20201230152058798](http://pic.turboway.top/blogimg/image-20201230152058798.png)
 
 导进数据库后，在修改下字段类型以解决精度问题。
-
+```sql
 alter table age_of_barbarians modify register_time timestamp(0);
 alter table age_of_barbarians modify avg_online_minutes float(10, 2);
 alter table age_of_barbarians modify pay_price float(10, 2);
-image-20201230153430246
+```
 
-3. 数据分析可视化
-3.1 新增用户
-总的用户数为 3,116,941。
+![image-20201230153430246](http://pic.turboway.top/blogimg/image-20201230153430246.png)
 
-总的记录数与用户数据一致，说明 use_id 可以作为唯一 ID。所以后续对用户的统计，可以不用加 distinct
+# 3. 数据分析可视化
 
-image-20201230154232372
+## 3.1 新增用户
+
+总的用户数为  3,116,941。 
+> 总的记录数与用户数据一致，说明 use_id 可以作为唯一 ID。所以后续对用户的统计，可以不用加 distinct
+
+![image-20201230154232372](http://pic.turboway.top/blogimg/image-20201230154232372.png)
 
 其中 PU 为 60,988 人， 占比 1.96 %
 
-PU ( Paying Users）：付费用户总量
+>PU ( Paying Users）：付费用户总量
 
-image-20201230162906441
+![image-20201230162906441](http://pic.turboway.top/blogimg/image-20201230162906441.png)
 
 DNU 的情况如下图，可以看到有两个注册高峰，应该是这款游戏做了什么活动引流产生。
 
-DNU（Daily New Users）： 每日游戏中的新登入用户数量，即每日新用户数。
+>DNU（Daily New Users）： 每日游戏中的新登入用户数量，即每日新用户数。
 
-image-20201230170002894
+![image-20201230170002894](http://pic.turboway.top/blogimg/image-20201230170002894.png)
 
 每小时注册的用户情况如下，可以看到新用户的注册高峰是在晚间的 21 点。
 
-image-20201230170339951
+![image-20201230170339951](http://pic.turboway.top/blogimg/image-20201230170339951.png)
 
-3.2 用户活跃度
+## 3.2 用户活跃度
+
 从平均在线时间来看，付费用户的平均在线时间高达 2 个小时，远大于整体的平均在线时间。
 
-image-20201230172026634
+![image-20201230172026634](http://pic.turboway.top/blogimg/image-20201230172026634.png)
 
-3.3 用户消费情况
+## 3.3 用户消费情况
+
 APA（Active Payment Account）：活跃付费用户数。
 
 ARPU(Average Revenue Per User) ：平均每用户收入。
@@ -77,6 +88,7 @@ ARPPU (Average Revenue Per Paying User)： 平均每付费用户收入。
 
 PUR(Pay User Rate)：付费比率，可通过 APA/AU 计算得出。
 
+```sql
 -- APA（Active Payment Account）：活跃付费用户数。
 select count(1) as APA from age_of_barbarians where pay_price > 0 and avg_online_minutes > 0; -- 60987
 
@@ -99,15 +111,24 @@ select  count(1) as pu,  -- 60988
         sum(pay_price) / sum(pay_count) as each_pay_price -- 9.222539
 from age_of_barbarians
 where pay_price > 0;
+```
+
 从上方的统计结果可以知道，这 6 万多的付费用户，一共消费了 178 万元，平均每人消费 29 元。
 
-平均每用户收入 0.58 元，平均每付费用户收入 29.19 元，付费比率为 2% 。
+平均每用户收入 0.58 元，平均每付费用户收入  29.19 元，付费比率为 2% 。
 
-这个付费比率应该是比较低的，可以通过一些首冲活动来提高新用户的付费意愿。
+> 这个付费比率应该是比较低的，可以通过一些首冲活动来提高新用户的付费意愿。
+
+![image-20201230174654309](http://pic.turboway.top/blogimg/image-20201230174654309.png)
 
 
-3.4 用户游戏情况
+
+## 3.4 用户游戏情况
+
 从胜率和场次来看，氪金确实可以让你变强，付费用户的平均胜率为 71.13 %，远大于非付费用户的 38.03 %，当然也是因为付费用户的平均游戏场次要远大于一般用户，毕竟越肝越强。
 
 从游戏类型来看，PVE 的平均胜率达到 90.1 %，说明难度还是比较低的，游戏体验还是很好的，适合符合入门级难度设定。
 
+![image-20201231100513252](http://pic.turboway.top/blogimg/image-20201231100513252.png)
+
+![image-20201231103330520](http://pic.turboway.top/blogimg/image-20201231103330520.png)
